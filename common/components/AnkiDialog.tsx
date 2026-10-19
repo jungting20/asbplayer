@@ -90,7 +90,7 @@ const useStyles = makeStyles<Theme>((theme) => ({
 const boundaryIntervalSubtitleCountRadius = 1;
 const boundaryIntervalSubtitleTimeRadius = 5000;
 
-const boundaryIntervalFromCard = (subtitle: SubtitleModel, theSurroundingSubtitles: SubtitleModel[]) => {
+export const boundaryIntervalFromCard = (subtitle: SubtitleModel, theSurroundingSubtitles: SubtitleModel[]) => {
     const { surroundingSubtitles: subtitlesToDisplay } = surroundingSubtitlesAroundInterval(
         theSurroundingSubtitles,
         subtitle.start,
@@ -99,20 +99,20 @@ const boundaryIntervalFromCard = (subtitle: SubtitleModel, theSurroundingSubtitl
         boundaryIntervalSubtitleTimeRadius
     );
 
-    let min: number | null = null;
-    let max: number | null = null;
+    let min = subtitle.start;
+    let max = subtitle.end;
 
     for (const s of subtitlesToDisplay ?? []) {
-        if (min === null || s.start < min) {
+        if (s.start < min) {
             min = s.start;
         }
 
-        if (max === null || s.end > max) {
+        if (s.end > max) {
             max = s.end;
         }
     }
 
-    return min !== null && max !== null && [min, max];
+    return [min, max];
 };
 
 type Mark = {
@@ -413,7 +413,7 @@ const AnkiDialog = ({
             initialSelectedTimestampInterval || [card.subtitle.start, card.subtitle.end] || undefined;
         const timestampBoundaryInterval =
             boundaryIntervalFromCard(card.subtitle, card.surroundingSubtitles) || undefined;
-        const timestampMarks = sliderMarksFromCard(card.surroundingSubtitles, timestampBoundaryInterval!) || undefined;
+        const timestampMarks = sliderMarksFromCard(card.surroundingSubtitles, timestampBoundaryInterval) || undefined;
         const selectedSubtitles =
             timestampInterval === undefined
                 ? []

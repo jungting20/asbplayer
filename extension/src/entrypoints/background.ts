@@ -82,7 +82,12 @@ import OpenStatisticsHandler from '@/handlers/video/open-statistics-handler';
 import StatisticsOverlayForwarderHandler from '@/handlers/statistics-overlay/statistics-overlay-forwarder-handler';
 import OpenStatisticsOverlayHandler from '@/handlers/open-statistics-overlay-handler';
 
+import { removeSubtitleRangeEditorsForWindow } from '@project/extension/src/services/subtitle-range-editors';
+
 export default defineBackground(() => {
+    browser.windows.onRemoved.addListener((windowId) => {
+        void removeSubtitleRangeEditorsForWindow(windowId).catch((error) => asbError('range-editors/cleanup', error));
+    });
     const logStore = new SessionLogStorage();
     const logProvider = new LogProvider(logStore);
     void configureLogProvider(logProvider);

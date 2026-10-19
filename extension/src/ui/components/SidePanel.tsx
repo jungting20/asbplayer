@@ -61,6 +61,7 @@ import { useSidePanelRequestedLocation } from '@project/extension/src/ui/hooks/u
 import { clearExtensionRequestedLocation } from '@/services/side-panel';
 import { uiTabRegistry } from '@project/extension/src/ui/hooks/use-media-id';
 import { createStatisticsPopup } from '@/services/statistics-util';
+import { openSubtitleRangeEditors } from '@project/extension/src/services/subtitle-range-editors';
 
 interface Props {
     dictionaryProvider: DictionaryProvider;
@@ -300,6 +301,24 @@ export default function SidePanel({ dictionaryProvider, settingsProvider, settin
             setAlertOpen(true);
         },
         [t]
+    );
+
+    const handleOpenSubtitleCards = useCallback(
+        async (cards: CardModel[]) => {
+            try {
+                const tab = syncedVideoTab ? await browser.tabs.get(syncedVideoTab.id) : undefined;
+                await openSubtitleRangeEditors(
+                    cards.map((card) => ({
+                        ...card,
+                        subtitleFileName: subtitleFileNames?.[card.subtitle.track] ?? card.subtitleFileName,
+                        url: tab?.url,
+                    }))
+                );
+            } catch (error) {
+                handleError(error);
+            }
+        },
+        [syncedVideoTab, subtitleFileNames, handleError]
     );
 
     const handleAlertClosed = useCallback(() => setAlertOpen(false), []);
@@ -753,6 +772,7 @@ export default function SidePanel({ dictionaryProvider, settingsProvider, settin
                                 settings={settings}
                                 playbackPreferences={playbackPreferences}
                                 onCopy={handleMineFromSubtitlePlayer}
+                                onOpenSubtitleCards={handleOpenSubtitleCards}
                                 onError={handleError}
                                 onUnloadVideo={noOp}
                                 onLoaded={noOp}

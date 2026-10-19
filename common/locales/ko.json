@@ -5,6 +5,7 @@
         "failed": "오디오를 저장하지 못했습니다. 다시 시도해 주세요."
     },
     "subtitleTimeFilter": {
+        "editorsUnavailable": "편집창을 불러오지 못했습니다. 자막 패널에서 다시 열어 주세요.",
         "openEditors": "구간 편집창 열기 ({{count}}개)",
         "editorsTitle": "구간별 편집 ({{count}}개)",
         "closeEditors": "모두 닫기",
