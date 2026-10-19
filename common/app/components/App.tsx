@@ -36,6 +36,8 @@ import { v4 as uuidv4 } from 'uuid';
 import clsx from 'clsx';
 import Alert from '@project/common/app/components/Alert';
 import AnkiDialog from '@project/common/components/AnkiDialog';
+import AudioDownloadDialog from '@project/common/components/AudioDownloadDialog';
+import SubtitleRangeEditorsDialog from '@project/common/components/SubtitleRangeEditorsDialog';
 import Paper from '@mui/material/Paper';
 import DragOverlay from '@project/common/app/components/DragOverlay';
 import Bar from '@project/common/app/components/Bar';
@@ -421,6 +423,7 @@ function App({
     const dragEnterRef = useRef<Element | null>(null);
     const [fileName, setFileName] = useState<string>();
     const [ankiDialogOpen, setAnkiDialogOpen] = useState<boolean>(false);
+    const [subtitleRangeCards, setSubtitleRangeCards] = useState<CardModel[]>();
     const [ankiDialogDisabled, setAnkiDialogDisabled] = useState<boolean>(false);
     const [ankiDialogCard, setAnkiDialogCard] = useState<CardModel>();
     const miningContext = useMemo(() => new MiningContext(), []);
@@ -812,19 +815,21 @@ function App({
         [dictionaryProvider, extension.id, sources]
     );
 
+    const [audioDownloadClip, setAudioDownloadClip] = useState<AudioClip>();
     const handleDownloadAudio = useCallback(
-        async (card: CardModel) => {
+        async (card: CardModel, promptForName = false) => {
             try {
                 const clip = AudioClip.fromCard(card, settings.audioPaddingStart, settings.audioPaddingEnd, false);
 
-                if (clip?.error === undefined) {
-                    if (settings.preferMp3) {
-                        void clip!.toMp3(() => new mp3WorkerFactory()).download();
+                if (clip && clip.error === undefined) {
+                    const downloadableClip = settings.preferMp3 ? clip.toMp3(() => new mp3WorkerFactory()) : clip;
+                    if (promptForName) {
+                        setAudioDownloadClip(downloadableClip);
                     } else {
-                        void clip!.download();
+                        await downloadableClip.download();
                     }
                 } else {
-                    handleError(t(clip.errorLocKey!));
+                    if (clip) handleError(t(clip.errorLocKey!));
                 }
             } catch (e) {
                 handleError(e);
@@ -1836,6 +1841,24 @@ function App({
         <StyledEngineProvider injectFirst>
             <ThemeProvider theme={theme}>
                 <CssBaseline />
+                {subtitleRangeCards && (
+                    <SubtitleRangeEditorsDialog
+                        cards={subtitleRangeCards}
+                        onClose={() => setSubtitleRangeCards(undefined)}
+                        onExported={() => dictionaryProvider.ankiCardWasModified()}
+                        anki={anki}
+                        settings={settings}
+                        mp3Encoder={mp3Encoder}
+                        onCopyToClipboard={handleCopyToClipboard}
+                        lastSelectedExportMode={lastSelectedAnkiExportMode}
+                    />
+                )}
+                {audioDownloadClip && (
+                    <AudioDownloadDialog
+                        audioClip={audioDownloadClip}
+                        onClose={() => setAudioDownloadClip(undefined)}
+                    />
+                )}
                 <div
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
@@ -1890,7 +1913,7 @@ function App({
                                 onClose={handleCloseCopyHistory}
                                 onDelete={deleteCopyHistoryItem}
                                 onDeleteAll={deleteAllCopyHistoryItems}
-                                onClipAudio={handleDownloadAudio}
+                                onClipAudio={(item) => void handleDownloadAudio(item, true)}
                                 onDownloadImage={handleDownloadImage}
                                 onDownloadSectionAsSrt={handleDownloadCopyHistorySectionAsSrt}
                                 onSelect={handleSelectCopyHistoryItem}
@@ -2051,6 +2074,7 @@ function App({
                                     profile={profile}
                                     playbackPreferences={playbackPreferences}
                                     onCopy={handleCopy}
+                                    onOpenSubtitleCards={setSubtitleRangeCards}
                                     onError={handleError}
                                     onUnloadVideo={handleUnloadVideo}
                                     onLoaded={handleFilesLoaded}
@@ -2094,7 +2118,7 @@ function App({
                                     videoFullscreen={videoFullscreen}
                                     hideSubtitlePlayer={hideSubtitlePlayer || videoFullscreen}
                                     videoPopOut={videoPopOut}
-                                    disableKeyEvents={disableKeyEvents}
+                                    disableKeyEvents={disableKeyEvents || subtitleRangeCards !== undefined}
                                     miningContext={miningContext}
                                     keyBinder={keyBinder}
                                     webSocketClient={webSocketClient}

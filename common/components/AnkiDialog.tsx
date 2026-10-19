@@ -6,7 +6,7 @@ import {
     joinSubtitles,
     extractText,
 } from '@project/common/util';
-import type { RefObject } from 'react';
+import type { RefObject, ReactNode } from 'react';
 import React, { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import makeStyles from '@mui/styles/makeStyles';
@@ -19,6 +19,7 @@ import Badge from '@mui/material/Badge';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Dialog from '@mui/material/Dialog';
+import Paper from '@mui/material/Paper';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import Grid from '@mui/material/Grid';
@@ -184,7 +185,40 @@ export interface AnkiDialogState {
     timestampInterval?: number[];
 }
 
+const AnkiDialogFrame = ({
+    embedded,
+    title,
+    open,
+    onClose,
+    children,
+}: {
+    embedded: boolean;
+    title?: string;
+    open: boolean;
+    onClose: () => void;
+    children: ReactNode;
+}) =>
+    embedded ? (
+        open ? (
+            <Paper
+                component="section"
+                role="region"
+                aria-label={title}
+                variant="outlined"
+                sx={{ display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0, overflow: 'hidden' }}
+            >
+                {children}
+            </Paper>
+        ) : null
+    ) : (
+        <Dialog open={open} disableRestoreFocus disableEnforceFocus fullWidth maxWidth="sm" onClose={onClose}>
+            {children}
+        </Dialog>
+    );
+
 interface AnkiDialogProps {
+    embedded?: boolean;
+    title?: string;
     open: boolean;
     disabled: boolean;
     card: CardModel;
@@ -215,6 +249,8 @@ interface AnkiDialogProps {
 }
 
 const AnkiDialog = ({
+    embedded = false,
+    title,
     open,
     disabled,
     card,
@@ -706,6 +742,7 @@ const AnkiDialog = ({
             audioClip?.stop();
         }
     }, [open, audioClip]);
+    useEffect(() => () => audioClip?.stop(), [audioClip]);
 
     const handleSentenceTextChange = useCallback((text: string) => {
         setText(text);
@@ -764,10 +801,10 @@ const AnkiDialog = ({
     const handleActionBlur = useCallback(() => setFocusedAction(undefined), []);
 
     useEffect(() => {
-        if (open && !disabled) {
+        if (open && !disabled && !embedded) {
             focusOnPreferredAction();
         }
-    }, [open, disabled, focusOnPreferredAction]);
+    }, [open, disabled, embedded, focusOnPreferredAction]);
 
     const handleProceed = useCallback(
         async (mode: AnkiExportMode, noteIds?: number[]) => {
@@ -794,7 +831,9 @@ const AnkiDialog = ({
     const handleExport = useCallback(() => handleProceed('default'), [handleProceed]);
 
     useEffect(() => {
+        if (!open) return;
         const listener = (e: KeyboardEvent) => {
+            if (embedded && !dialogRef.current?.parentElement?.contains(document.activeElement)) return;
             if ((e.metaKey || e.altKey) && e.shiftKey) {
                 if (e.key === 'Enter') {
                     const focused = focusedButton();
@@ -808,7 +847,7 @@ const AnkiDialog = ({
         };
         document.addEventListener('keydown', listener);
         return () => document.removeEventListener('keydown', listener);
-    }, [focusOnPreferredAction]);
+    }, [focusOnPreferredAction, embedded, open]);
 
     const openCardSelectDialog = useCallback(() => setCardSelectDialogOpen(true), []);
 
@@ -821,15 +860,15 @@ const AnkiDialog = ({
 
     return (
         <>
-            <Dialog open={open} disableRestoreFocus disableEnforceFocus fullWidth maxWidth="sm" onClose={onCancel}>
-                <Toolbar>
+            <AnkiDialogFrame embedded={embedded} title={title} open={open} onClose={onCancel}>
+                <Toolbar variant={embedded ? 'dense' : 'regular'} sx={embedded ? { px: 1 } : undefined}>
                     <AnkiDialogTutorialBubble
                         disabled={!effectiveInTutorial}
                         onConfirm={() => setTutorialStep(TutorialStep.wordField)}
                         show={tutorialStep === TutorialStep.dialog}
                     >
-                        <Typography variant="h6" className={classes.title}>
-                            {t('ankiDialog.title')}
+                        <Typography variant={embedded ? 'subtitle2' : 'h6'} className={classes.title}>
+                            {title ?? t('ankiDialog.title')}
                         </Typography>
                     </AnkiDialogTutorialBubble>
                     {profiles !== undefined && onSetActiveProfile && (
@@ -869,7 +908,10 @@ const AnkiDialog = ({
                         </IconButton>
                     )}
                 </Toolbar>
-                <DialogContent ref={dialogRefCallback}>
+                <DialogContent
+                    ref={dialogRefCallback}
+                    sx={embedded ? { px: 1, py: 1, overflowX: 'hidden' } : undefined}
+                >
                     <form className={classes.root}>
                         {ankiFieldModels.map((model) => {
                             const key = model.custom ? `custom_${model.key}` : `standard_${model.key}`;
@@ -1079,7 +1121,7 @@ const AnkiDialog = ({
                         </Alert>
                     )}
                 </DialogContent>
-                <DialogActions>
+                <DialogActions sx={embedded ? { flexWrap: 'wrap', gap: 0.5, p: 1 } : undefined}>
                     <Tooltip title={t('cardSelectUi.title')}>
                         <AnkiDialogButton
                             ref={updateSpecificButtonRef}
@@ -1122,7 +1164,7 @@ const AnkiDialog = ({
                         {t('ankiDialog.export')}
                     </AnkiDialogButton>
                 </DialogActions>
-            </Dialog>
+            </AnkiDialogFrame>
             <ImageDialog
                 open={open && imageDialogOpen}
                 image={image}

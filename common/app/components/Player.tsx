@@ -77,6 +77,9 @@ import {
     restoreClaimedTokenSelectionFocus,
 } from '@project/common/app/hooks/use-token-selection';
 
+import { subtitleTimeRangeCards } from '@project/common/app/components/subtitle-time-filter';
+import type { SubtitleTimeRange } from '@project/common/app/components/subtitle-time-filter';
+
 const minVideoPlayerWidth = 300;
 const subtitleCollectionOptions = { returnLastShown: true, returnNextToShow: true, showingCheckRadiusMs: 150 };
 interface StylesProps {
@@ -164,6 +167,7 @@ interface PlayerProps {
     onCopy: (card: CardModel, postMineAction: PostMineAction | undefined, id: string | undefined) => void;
     onLoaded: (file: File[]) => void;
     onTabSelected: (tab: VideoTabModel) => void;
+    onOpenSubtitleCards?: (cards: CardModel[]) => void;
     onAnkiDialogRequest: () => void;
     onAnkiDialogRewind: () => void;
     onAppBarToggle: () => void;
@@ -220,6 +224,7 @@ function PlayerComponent(
         onError,
         onUnloadVideo,
         onCopy,
+        onOpenSubtitleCards,
         onLoaded,
         onTabSelected,
         onAnkiDialogRequest,
@@ -1210,6 +1215,40 @@ function PlayerComponent(
         [clock, seek, play, mediaAdapter]
     );
 
+    const handleOpenTimeRanges = useCallback(
+        (ranges: readonly SubtitleTimeRange[]) => {
+            const cards = subtitleTimeRangeCards(
+                (subtitles ?? []).filter((subtitle) => !disabledSubtitleTracks[subtitle.track]),
+                ranges,
+                subtitleFiles?.map((file) => file.file.name) ?? []
+            );
+            onOpenSubtitleCards?.(
+                cards.map((card) => ({
+                    ...card,
+                    file:
+                        videoFile && videoFileUrl
+                            ? {
+                                  name: videoFile.file.name,
+                                  blobUrl: videoFileUrl,
+                                  audioTrack: selectedAudioTrack,
+                                  playbackRate,
+                              }
+                            : undefined,
+                }))
+            );
+        },
+        [
+            subtitles,
+            disabledSubtitleTracks,
+            subtitleFiles,
+            onOpenSubtitleCards,
+            videoFile,
+            videoFileUrl,
+            selectedAudioTrack,
+            playbackRate,
+        ]
+    );
+
     const handleCopyFromSubtitlePlayer = useCallback(
         async (
             subtitle: SubtitleModel,
@@ -1660,6 +1699,7 @@ function PlayerComponent(
                         disabledSubtitleTracks={disabledSubtitleTracks}
                         onSeek={handleSeekToTimestamp}
                         onCopy={handleCopyFromSubtitlePlayer}
+                        onOpenTimeRanges={onOpenSubtitleCards ? handleOpenTimeRanges : undefined}
                         onMouseOver={handleMouseOver}
                         onMouseOut={handleMouseOut}
                         onOffsetChange={handleOffsetChange}

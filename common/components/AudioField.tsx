@@ -11,6 +11,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import type { AudioClip } from '@project/common/audio-clip';
 import { useTranslation } from 'react-i18next';
 import Badge from '@mui/material/Badge';
+import AudioDownloadDialog from '@project/common/components/AudioDownloadDialog';
 
 const useStyles = makeStyles(() => ({
     root: {
@@ -62,6 +63,7 @@ export default function AudioField({
     const classes = useStyles();
     const { t } = useTranslation();
     const [playing, setPlaying] = useState<boolean>(false);
+    const [downloadOpen, setDownloadOpen] = useState(false);
     let audioActionElement: React.JSX.Element | undefined = undefined;
 
     useEffect(() => setPlaying(audioClip.playing), [audioClip]);
@@ -76,7 +78,7 @@ export default function AudioField({
                         disabled={audioClip?.error !== undefined}
                         onClick={(e) => {
                             e.stopPropagation();
-                            void audioClip.download();
+                            setDownloadOpen(true);
                         }}
                         edge="end"
                     >
@@ -119,6 +121,11 @@ export default function AudioField({
 
     return (
         <div className={classes.root} onClick={onPlayAudio}>
+            {downloadOpen && (
+                <div onClick={(event) => event.stopPropagation()}>
+                    <AudioDownloadDialog audioClip={audioClip} onClose={() => setDownloadOpen(false)} />
+                </div>
+            )}
             <TextField
                 variant="filled"
                 color="primary"

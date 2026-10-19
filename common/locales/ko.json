@@ -1,4 +1,22 @@
 {
+    "audioDownload": {
+        "fileName": "파일명",
+        "help": "기본 파일명: 오늘날짜_01.{{extension}}, 오늘날짜_02.{{extension}}, … 날짜가 바뀌면 01부터 시작합니다. 확장자는 자동으로 붙습니다.",
+        "failed": "오디오를 저장하지 못했습니다. 다시 시도해 주세요."
+    },
+    "subtitleTimeFilter": {
+        "openEditors": "구간 편집창 열기 ({{count}}개)",
+        "editorsTitle": "구간별 편집 ({{count}}개)",
+        "closeEditors": "모두 닫기",
+        "title": "시간 구간 필터",
+        "ranges": "시간 구간 목록",
+        "help": "한 줄에 한 구간: HH:MM:SS ~ HH:MM:SS (MM:SS 및 밀리초도 사용 가능). 입력한 구간과 겹치는 자막을 표시합니다. 비워두면 전체 자막을 표시합니다.",
+        "invalidLine": "{{line}}번째 줄을 확인하세요. 시작 ~ 종료 형식으로, 종료가 시작보다 늦어야 합니다.",
+        "clear": "필터 초기화",
+        "apply": "적용",
+        "noMatches": "지정한 시간 구간에 해당하는 자막이 없습니다.",
+        "count": "{{shown}} / {{total}}개 자막"
+    },
     "action": {
         "cancel": "취소",
         "close": "Close",

@@ -37,6 +37,8 @@ const subtitleSearchableText = (subtitle: DisplaySubtitleModel): string => {
 
 interface UseSubtitleFindParams {
     subtitles?: DisplaySubtitleModel[];
+    visibleSubtitleIndexes?: ReadonlyMap<number, number>;
+    scrollToSubtitleIndex?: (index: number, behavior: 'auto' | 'smooth') => void;
     dictionaryTracks: DictionaryTrack[];
     disableKeyEventsRef: MutableRefObject<boolean>;
     hiddenRef: MutableRefObject<boolean>;
@@ -51,6 +53,8 @@ interface UseSubtitleFindParams {
 
 export const useSubtitleFind = ({
     subtitles,
+    visibleSubtitleIndexes,
+    scrollToSubtitleIndex,
     dictionaryTracks,
     disableKeyEventsRef,
     hiddenRef,
@@ -159,18 +163,20 @@ export const useSubtitleFind = ({
         const regex = parseRegexQuery(query);
         if (regex) {
             for (const [i, subtitle] of subtitles.entries()) {
+                if (visibleSubtitleIndexes && !visibleSubtitleIndexes.has(i)) continue;
                 const searchableText = subtitleSearchableText(subtitle);
                 if (regex.test(searchableText)) matches.push(i);
             }
         } else {
             const terms = normalizedLookupTerms(trimmed).concat(expansion.query === trimmed ? expansion.terms : []);
             for (const [i, subtitle] of subtitles.entries()) {
+                if (visibleSubtitleIndexes && !visibleSubtitleIndexes.has(i)) continue;
                 const normalized = normalizeSearchText(subtitleSearchableText(subtitle));
                 if (terms.some((term) => normalized.includes(term))) matches.push(i);
             }
         }
         return matches;
-    }, [open, subtitles, query, expansion]);
+    }, [open, subtitles, query, expansion, visibleSubtitleIndexes]);
     const matchesRef = useRef(matches);
     matchesRef.current = matches;
 
@@ -211,7 +217,9 @@ export const useSubtitleFind = ({
     const scrollToMatch = useCallback(
         (subtitleIndex: number) => {
             lastScrollTimestampRef.current = Date.now();
-            if (!hiddenRef.current) {
+            if (!hiddenRef.current && scrollToSubtitleIndex) {
+                scrollToSubtitleIndex(subtitleIndex, 'auto');
+            } else if (!hiddenRef.current) {
                 virtuosoRef.current?.scrollToIndex({
                     index: subtitleIndex,
                     align: 'center',
@@ -221,7 +229,14 @@ export const useSubtitleFind = ({
             setHighlightedJumpToSubtitleIndex(subtitleIndex);
             highlightTokenIfPresent(subtitleIndex);
         },
-        [hiddenRef, highlightTokenIfPresent, lastScrollTimestampRef, setHighlightedJumpToSubtitleIndex, virtuosoRef]
+        [
+            hiddenRef,
+            highlightTokenIfPresent,
+            lastScrollTimestampRef,
+            setHighlightedJumpToSubtitleIndex,
+            virtuosoRef,
+            scrollToSubtitleIndex,
+        ]
     );
 
     useEffect(() => {

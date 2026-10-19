@@ -1,4 +1,22 @@
 {
+    "audioDownload": {
+        "fileName": "File name",
+        "help": "Default: YYYYMMDD_01.{{extension}}, YYYYMMDD_02.{{extension}}, … The number resets each day. The extension is added automatically.",
+        "failed": "Could not save the audio. Please try again."
+    },
+    "subtitleTimeFilter": {
+        "openEditors": "Open range editors ({{count}})",
+        "editorsTitle": "Range editors ({{count}})",
+        "closeEditors": "Close all",
+        "title": "Filter by time",
+        "ranges": "Time ranges",
+        "help": "One range per line: HH:MM:SS ~ HH:MM:SS (MM:SS and milliseconds are also supported). Shows subtitles overlapping any range. Empty input shows all subtitles.",
+        "invalidLine": "Check line {{line}}. Use start ~ end, with the end after the start.",
+        "clear": "Clear filter",
+        "apply": "Apply",
+        "noMatches": "No subtitles in these time ranges.",
+        "count": "{{shown}} / {{total}} subtitles"
+    },
     "action": {
         "cancel": "Cancelar",
         "close": "Close",

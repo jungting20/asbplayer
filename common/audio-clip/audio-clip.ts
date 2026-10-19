@@ -1,5 +1,6 @@
 import { asbError } from '@project/common/util/log';
 import { download } from '@project/common/util';
+import { defaultAudioFileName, recordAudioFileDownload } from '@project/common/audio-clip/audio-file-name';
 import Mp3Encoder from '@project/common/audio-clip/mp3-encoder';
 
 import type { CardModel, FileModel } from '@project/common';
@@ -867,9 +868,17 @@ export default class AudioClip {
         return this.data.blob();
     }
 
-    async download() {
+    async download(name?: string) {
         const blob = await this.data.blob();
-        download(blob, this.name);
+        const customName = name?.trim();
+        const extension = `.${this.extension}`;
+        const fileName = customName
+            ? customName.toLowerCase().endsWith(extension.toLowerCase())
+                ? customName
+                : customName + extension
+            : defaultAudioFileName(this.extension);
+        download(blob, fileName);
+        recordAudioFileDownload(fileName);
     }
 
     toMp3(mp3WorkerFactory: () => Worker) {
