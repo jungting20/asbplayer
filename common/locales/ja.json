@@ -5,6 +5,7 @@
         "failed": "Could not save the audio. Please try again."
     },
     "subtitleTimeFilter": {
+        "loadLast": "前回保存した区間を読み込む",
         "editorsUnavailable": "Could not load range editors. Open them again from the subtitle panel.",
         "openEditors": "Open range editors ({{count}})",
         "editorsTitle": "Range editors ({{count}})",

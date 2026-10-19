@@ -281,7 +281,13 @@ export interface RecordingFinishedMessage extends Message {
     readonly command: 'recording-finished';
 }
 
+export interface RerecordSubtitleRangeMessage extends Message {
+    readonly command: 'rerecord-subtitle-range';
+    readonly uiState: AnkiUiSavedState;
+}
+
 export interface RerecordMediaMessage extends Message {
+    readonly returnAudio?: boolean;
     readonly command: 'rerecord-media';
     readonly duration: number;
     readonly uiState: AnkiUiSavedState;

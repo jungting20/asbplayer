@@ -16,10 +16,11 @@ const lastSequence = (date: string): number => {
     }
 };
 
+// Range editors supply a fixed position; other downloads use the next daily sequence.
 // Previewing or cancelling a download does not consume a number.
-export const defaultAudioFileName = (extension: string): string => {
+export const defaultAudioFileName = (extension: string, sequence?: number): string => {
     const date = localDate();
-    return `${date}_${String(lastSequence(date) + 1).padStart(2, '0')}.${extension}`;
+    return `${date}_${String(sequence ?? lastSequence(date) + 1).padStart(2, '0')}.${extension}`;
 };
 
 export const recordAudioFileDownload = (fileName: string): void => {

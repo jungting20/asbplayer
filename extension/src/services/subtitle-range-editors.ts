@@ -4,7 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 const sessionPrefix = 'subtitle-range-editors:';
 type SessionStorage = Pick<StorageArea, 'get' | 'set' | 'remove'>;
-interface EditorSession {
+export interface EditorSession {
+    video?: { id: number; src: string };
     cards: CardModel[];
     windowId?: number;
 }
@@ -31,13 +32,15 @@ const popupApi: PopupApi = {
 export const openSubtitleRangeEditors = async (
     cards: CardModel[],
     storage: SessionStorage = browser.storage.session,
-    popup: PopupApi = popupApi
+    popup: PopupApi = popupApi,
+    video?: EditorSession['video']
 ): Promise<void> => {
     if (!cards.length) return;
     const id = uuidv4();
     const key = sessionPrefix + id;
     // Keep nearby subtitle context without copying an entire episode into session storage for every card.
     const session: EditorSession = {
+        video,
         cards: cards.map((card) => ({
             ...card,
             surroundingSubtitles: card.surroundingSubtitles.filter(
@@ -71,3 +74,6 @@ export const removeSubtitleRangeEditorsForWindow = async (
         .map(([key]) => key);
     if (keys.length) await storage.remove(keys);
 };
+
+export const loadSubtitleRangeEditorSession = async (id: string): Promise<EditorSession | undefined> =>
+    (await browser.storage.session.get(sessionPrefix + id))[sessionPrefix + id] as EditorSession | undefined;

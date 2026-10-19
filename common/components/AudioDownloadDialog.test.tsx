@@ -75,3 +75,28 @@ it('keeps the dialog open and allows retrying when downloading fails', async () 
     await clickButton('action.save');
     expect(onClose).toHaveBeenCalledTimes(1);
 });
+
+it('uses the modal position regardless of download order and keeps it when reopened', async () => {
+    localStorage.setItem('asbplayer.audioDownloadSequence', JSON.stringify({ date: '20261019', sequence: 99 }));
+    const renderPosition = (position: number, instance: string) =>
+        act(() =>
+            root.render(
+                <AudioDownloadDialog
+                    key={instance}
+                    audioClip={{ extension: 'mp3', download } as unknown as AudioClip}
+                    sequence={position}
+                    onClose={onClose}
+                />
+            )
+        );
+    renderPosition(2, 'second');
+    expect(document.querySelector('input')!.value).toBe('20261019_02.mp3');
+    await clickButton('action.save');
+    expect(download).toHaveBeenLastCalledWith('20261019_02.mp3');
+    renderPosition(1, 'first');
+    expect(document.querySelector('input')!.value).toBe('20261019_01.mp3');
+    await clickButton('action.save');
+    expect(download).toHaveBeenLastCalledWith('20261019_01.mp3');
+    renderPosition(2, 'second-reopened');
+    expect(document.querySelector('input')!.value).toBe('20261019_02.mp3');
+});

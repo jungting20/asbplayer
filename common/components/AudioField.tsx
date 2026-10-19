@@ -24,6 +24,8 @@ const useStyles = makeStyles(() => ({
 
 interface Props {
     audioClip: AudioClip;
+    downloadSequence?: number;
+    showRerecordButton?: boolean;
     timestampIntervalSelectionNotApplied: boolean;
     onPlayAudio: (e: React.MouseEvent<HTMLDivElement>) => void;
     onRerecord?: () => void;
@@ -56,6 +58,8 @@ const useAudioHelperText = (audioClip?: AudioClip, onRerecord?: () => void) => {
 
 export default function AudioField({
     audioClip,
+    downloadSequence,
+    showRerecordButton = true,
     timestampIntervalSelectionNotApplied,
     onPlayAudio,
     onRerecord,
@@ -90,7 +94,7 @@ export default function AudioField({
                 {playing && <PauseIcon />}
                 {!playing && <PlayArrowIcon />}
             </IconButton>
-            {onRerecord !== undefined && (
+            {showRerecordButton && onRerecord !== undefined && (
                 <Tooltip
                     title={
                         timestampIntervalSelectionNotApplied
@@ -123,7 +127,11 @@ export default function AudioField({
         <div className={classes.root} onClick={onPlayAudio}>
             {downloadOpen && (
                 <div onClick={(event) => event.stopPropagation()}>
-                    <AudioDownloadDialog audioClip={audioClip} onClose={() => setDownloadOpen(false)} />
+                    <AudioDownloadDialog
+                        audioClip={audioClip}
+                        sequence={downloadSequence}
+                        onClose={() => setDownloadOpen(false)}
+                    />
                 </div>
             )}
             <TextField

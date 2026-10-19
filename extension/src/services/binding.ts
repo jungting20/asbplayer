@@ -42,6 +42,7 @@ import type {
     RecordMediaAndForwardSubtitleMessage,
     RequestingActiveTabPermissionMessage,
     RerecordMediaMessage,
+    RerecordSubtitleRangeMessage,
     ScreenshotTakenMessage,
     SettingsUpdatedMessage,
     ShowAnkiUiAfterRerecordMessage,
@@ -1065,6 +1066,27 @@ export default class Binding {
                         }
                         break;
                     }
+                    case 'rerecord-subtitle-range': {
+                        if (this.recordingMedia) {
+                            sendResponse({ error: 'Another recording is already in progress' });
+                            return;
+                        }
+                        const { uiState } = request.message as RerecordSubtitleRangeMessage;
+                        void this.rerecord(uiState.timestampInterval[0], uiState.timestampInterval[1], uiState, true)
+                            .then((response) => {
+                                if (response?.error) {
+                                    this.recordingState = RecordingState.notRecording;
+                                    this.recordingMediaStartedTimestamp = undefined;
+                                }
+                                sendResponse(response);
+                            })
+                            .catch((error) => {
+                                this.recordingState = RecordingState.notRecording;
+                                this.recordingMediaStartedTimestamp = undefined;
+                                sendResponse({ error: error instanceof Error ? error.message : String(error) });
+                            });
+                        return true;
+                    }
                     case 'toggle-recording':
                         if (this._synced) {
                             void this._toggleRecordingMedia(PostMineAction.showAnkiDialog);
@@ -1750,8 +1772,9 @@ export default class Binding {
         }
     }
 
-    async rerecord(start: number, end: number, uiState: AnkiUiSavedState) {
+    async rerecord(start: number, end: number, uiState: AnkiUiSavedState, returnAudio = false) {
         if (this.recordingMedia) {
+            if (returnAudio) throw new Error('Another recording is already in progress');
             return;
         }
 
@@ -1769,6 +1792,7 @@ export default class Binding {
             sender: 'asbplayer-video',
             message: {
                 command: 'rerecord-media',
+                returnAudio,
                 duration: end - start,
                 uiState: uiState,
                 audioPaddingStart: audioPaddingStart,
@@ -1780,7 +1804,7 @@ export default class Binding {
             src: this._registeredVideoSrc,
         };
 
-        void browser.runtime.sendMessage(command);
+        return browser.runtime.sendMessage(command);
     }
 
     async seek(timestampMs: number): Promise<void> {

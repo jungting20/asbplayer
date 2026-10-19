@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { AutoPausePreference, PlayMode, PostMineAction, SubtitleHtml } from '@project/common';
-import type { IndexedSubtitleModel } from '@project/common';
+import type { AnkiUiSavedState, IndexedSubtitleModel } from '@project/common';
 import { SubtitleListPreference } from '@project/common/settings';
 import Binding from '@project/extension/src/services/binding';
 import type { BindingOptions } from '@project/extension/src/services/binding';
@@ -708,6 +708,43 @@ describe('Binding playback mode integration', () => {
             binding.unbind();
         }
     );
+
+    it('returns a manually recorded range to its editor through the existing recording flow', async () => {
+        const video = createVideo();
+        const binding = new Binding(video, bindingOptions(false, false));
+        binding.bind();
+        await jest.advanceTimersByTimeAsync(0);
+        const audio = { base64: 'range-audio', extension: 'webm' };
+        jest.spyOn(binding, 'seek').mockResolvedValue(undefined);
+        jest.spyOn(binding, 'play').mockResolvedValue(undefined);
+        jest.spyOn(browser.runtime, 'sendMessage').mockImplementation(async () => ({ audio }));
+        const response = jest.fn();
+        const state = { timestampInterval: [1000, 2500] } as AnkiUiSavedState;
+        for (const listener of runtimeListeners)
+            listener(
+                {
+                    sender: 'asbplayer-extension-to-video',
+                    src: binding.registeredVideoSrc,
+                    message: { command: 'rerecord-subtitle-range', uiState: state },
+                },
+                {},
+                response
+            );
+        await jest.advanceTimersByTimeAsync(0);
+        expect(binding.play).toHaveBeenCalledTimes(1);
+        expect(browser.runtime.sendMessage).toHaveBeenCalledWith(
+            expect.objectContaining({
+                message: expect.objectContaining({
+                    command: 'rerecord-media',
+                    returnAudio: true,
+                    timestamp: 1000,
+                    duration: 1500,
+                }),
+            })
+        );
+        expect(response).toHaveBeenCalledWith({ audio });
+        binding.unbind();
+    });
 
     it('shows active playback modes above the transition notification', async () => {
         const video = createVideo();

@@ -32,7 +32,21 @@ export default class RerecordMediaHandler {
         return 'rerecord-media';
     }
 
-    async handle(command: Command<Message>, sender: Browser.runtime.MessageSender) {
+    handle(
+        command: Command<Message>,
+        sender: Browser.runtime.MessageSender,
+        sendResponse: (response: unknown) => void
+    ) {
+        if ((command.message as RerecordMediaMessage).returnAudio) {
+            void this._rerecord(command, sender)
+                .then((audio) => sendResponse({ audio }))
+                .catch((error) => sendResponse({ error: error instanceof Error ? error.message : String(error) }));
+            return true;
+        }
+        void this._rerecord(command, sender);
+    }
+
+    private async _rerecord(command: Command<Message>, sender: Browser.runtime.MessageSender) {
         const rerecordCommand = command as VideoToExtensionCommand<RerecordMediaMessage>;
         const baseAudioModel: AudioModel = {
             base64: '',
@@ -40,9 +54,7 @@ export default class RerecordMediaHandler {
             paddingStart: rerecordCommand.message.audioPaddingStart,
             paddingEnd: rerecordCommand.message.audioPaddingEnd,
             start: rerecordCommand.message.timestamp,
-            end:
-                rerecordCommand.message.timestamp +
-                rerecordCommand.message.duration / rerecordCommand.message.playbackRate,
+            end: rerecordCommand.message.timestamp + rerecordCommand.message.duration,
             playbackRate: rerecordCommand.message.playbackRate,
         };
         let audio: AudioModel;
@@ -71,6 +83,8 @@ export default class RerecordMediaHandler {
                 error: AudioErrorCode.drmProtected,
             };
         }
+
+        if (rerecordCommand.message.returnAudio) return audio;
 
         void this._cardPublisher.publish(
             {

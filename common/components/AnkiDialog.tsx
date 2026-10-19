@@ -35,6 +35,7 @@ import Typography from '@mui/material/Typography';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import DoneIcon from '@mui/icons-material/Done';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import ListField from '@project/common/components/ListField';
 import type { Anki, ExportParams } from '@project/common/anki';
 import { isFirefox } from '@project/common/browser-detection';
@@ -222,6 +223,7 @@ interface AnkiDialogProps {
     open: boolean;
     disabled: boolean;
     card: CardModel;
+    audioDownloadSequence?: number;
     onProceed: (params: ExportParams) => Promise<void>;
     onRerecord?: () => void;
     onCancel: () => void;
@@ -254,6 +256,7 @@ const AnkiDialog = ({
     open,
     disabled,
     card,
+    audioDownloadSequence,
     onProceed,
     onCancel,
     onOpenSettings,
@@ -481,6 +484,12 @@ const AnkiDialog = ({
         settings.audioPaddingStart,
         settings.audioPaddingEnd,
     ]);
+
+    useEffect(() => {
+        if (card.audio?.start !== undefined && card.audio.end !== undefined) {
+            setLastAppliedTimestampIntervalToAudio([card.audio.start, card.audio.end]);
+        }
+    }, [card.audio]);
 
     const handlePlayAudio = useCallback(
         async (e: React.MouseEvent<HTMLDivElement>) => {
@@ -735,7 +744,12 @@ const AnkiDialog = ({
     );
 
     const disableApplyTextSelection = card.surroundingSubtitles.filter((s) => s.text.trim() !== '').length === 0;
-    const ankiFieldModels = sortedAnkiFieldModels(settings);
+    const configuredFieldModels = sortedAnkiFieldModels(settings);
+    const ankiFieldModels = [
+        ...configuredFieldModels.filter((model) => !model.custom && model.key === 'sentence'),
+        ...configuredFieldModels.filter((model) => !model.custom && model.key === 'audio'),
+        ...configuredFieldModels.filter((model) => model.custom || !['sentence', 'audio'].includes(model.key)),
+    ];
 
     useEffect(() => {
         if (!open) {
@@ -858,6 +872,73 @@ const AnkiDialog = ({
     const [tutorialStep, setTutorialStep] = useState<TutorialStep>(TutorialStep.dialog);
     const effectiveInTutorial = inTutorial && !cardSelectDialogOpen && !imageDialogOpen;
 
+    const timestampRangeControl = timestampInterval && timestampBoundaryInterval && timestampMarks && (
+        <Grid container direction="row">
+            <Grid item style={{ flexGrow: 1 }}>
+                <Slider
+                    slots={{ valueLabel: ValueLabelComponent }}
+                    value={timestampInterval}
+                    valueLabelFormat={sliderValueLabelFormat}
+                    onChange={handleTimestampIntervalChange}
+                    min={timestampBoundaryInterval[0]}
+                    max={timestampBoundaryInterval[1]}
+                    marks={timestampMarks}
+                    step={1}
+                    valueLabelDisplay="auto"
+                    className={classes.rangeSelectSlider}
+                    color="primary"
+                />
+            </Grid>
+            <Grid item>
+                <Tooltip title={t('ankiDialog.resetSlider')}>
+                    <span>
+                        <IconButton edge="end" style={{ marginTop: -4 }} onClick={handleResetTimestampInterval}>
+                            <RestoreIcon fontSize="small" />
+                        </IconButton>
+                    </span>
+                </Tooltip>
+            </Grid>
+            <Grid item>
+                <Tooltip title={t('ankiDialog.zoomIn')}>
+                    <span>
+                        <IconButton edge="end" style={{ marginTop: -4 }} onClick={handleZoomInTimestampInterval}>
+                            <ZoomInIcon fontSize="small" />
+                        </IconButton>
+                    </span>
+                </Tooltip>
+            </Grid>
+            <Grid item>
+                <Tooltip title={t('ankiDialog.zoomOut')}>
+                    <span>
+                        <IconButton edge="end" style={{ marginTop: -4 }} onClick={handleZoomOutTimestampInterval}>
+                            <ZoomOutIcon fontSize="small" />
+                        </IconButton>
+                    </span>
+                </Tooltip>
+            </Grid>
+            <Grid item>
+                <Tooltip title={t('ankiDialog.applySelection')}>
+                    <span>
+                        <IconButton
+                            edge="end"
+                            style={{ marginTop: -4 }}
+                            disabled={
+                                !timestampInterval ||
+                                (lastAppliedTimestampIntervalToText !== undefined &&
+                                    timestampInterval[0] === lastAppliedTimestampIntervalToText[0] &&
+                                    timestampInterval[1] === lastAppliedTimestampIntervalToText[1]) ||
+                                disableApplyTextSelection
+                            }
+                            onClick={handleApplyTimestampIntervalToText}
+                        >
+                            <DoneIcon fontSize="small" />
+                        </IconButton>
+                    </span>
+                </Tooltip>
+            </Grid>
+        </Grid>
+    );
+
     return (
         <>
             <AnkiDialogFrame embedded={embedded} title={title} open={open} onClose={onCancel}>
@@ -950,9 +1031,31 @@ const AnkiDialog = ({
                                             copyEnabled={!isFirefox}
                                         />
                                     )}
+                                    {onRerecord && !model.custom && model.key === 'audio' && model.field.display && (
+                                        <Button
+                                            fullWidth
+                                            sx={{ mb: 1 }}
+                                            disabled={disabled}
+                                            onClick={onRerecord}
+                                            startIcon={<FiberManualRecordIcon />}
+                                        >
+                                            {t('ankiDialog.rerecordAndApplySelection')}
+                                        </Button>
+                                    )}
+                                    {!audioClip && !model.custom && model.key === 'audio' && model.field.display && (
+                                        <TextField
+                                            variant="filled"
+                                            fullWidth
+                                            disabled
+                                            label={t('ankiDialog.audio')}
+                                            value=""
+                                        />
+                                    )}
                                     {audioClip && !model.custom && model.key === 'audio' && model.field.display && (
                                         <AudioField
                                             audioClip={audioClip}
+                                            downloadSequence={audioDownloadSequence}
+                                            showRerecordButton={false}
                                             timestampIntervalSelectionNotApplied={
                                                 timestampInterval?.[0] !== lastAppliedTimestampIntervalToAudio?.[0] ||
                                                 timestampInterval?.[1] !== lastAppliedTimestampIntervalToAudio?.[1]
@@ -961,6 +1064,7 @@ const AnkiDialog = ({
                                             onPlayAudio={handlePlayAudio}
                                         />
                                     )}
+                                    {!model.custom && model.key === 'audio' && timestampRangeControl}
                                     {!model.custom && model.key === 'source' && model.field.display && (
                                         <TextField
                                             variant="filled"
@@ -1027,86 +1131,6 @@ const AnkiDialog = ({
                             items={tags}
                             onItemsChange={setTags}
                         />
-                        {timestampInterval && timestampBoundaryInterval && timestampMarks && (
-                            <Grid container direction="row">
-                                <Grid item style={{ flexGrow: 1 }}>
-                                    <Slider
-                                        slots={{ valueLabel: ValueLabelComponent }}
-                                        value={timestampInterval}
-                                        valueLabelFormat={sliderValueLabelFormat}
-                                        onChange={handleTimestampIntervalChange}
-                                        min={timestampBoundaryInterval[0]}
-                                        max={timestampBoundaryInterval[1]}
-                                        marks={timestampMarks}
-                                        step={1}
-                                        valueLabelDisplay="auto"
-                                        className={classes.rangeSelectSlider}
-                                        color="primary"
-                                    />
-                                </Grid>
-                                <Grid item>
-                                    <Tooltip title={t('ankiDialog.resetSlider')}>
-                                        <span>
-                                            <IconButton
-                                                edge="end"
-                                                style={{ marginTop: -4 }}
-                                                onClick={handleResetTimestampInterval}
-                                            >
-                                                <RestoreIcon fontSize="small" />
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                </Grid>
-                                <Grid item>
-                                    <Tooltip title={t('ankiDialog.zoomIn')}>
-                                        <span>
-                                            <IconButton
-                                                edge="end"
-                                                style={{ marginTop: -4 }}
-                                                onClick={handleZoomInTimestampInterval}
-                                            >
-                                                <ZoomInIcon fontSize="small" />
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                </Grid>
-                                <Grid item>
-                                    <Tooltip title={t('ankiDialog.zoomOut')}>
-                                        <span>
-                                            <IconButton
-                                                edge="end"
-                                                style={{ marginTop: -4 }}
-                                                onClick={handleZoomOutTimestampInterval}
-                                            >
-                                                <ZoomOutIcon fontSize="small" />
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                </Grid>
-                                <Grid item>
-                                    <Tooltip title={t('ankiDialog.applySelection')}>
-                                        <span>
-                                            <IconButton
-                                                edge="end"
-                                                style={{ marginTop: -4 }}
-                                                disabled={
-                                                    !timestampInterval ||
-                                                    (lastAppliedTimestampIntervalToText !== undefined &&
-                                                        timestampInterval[0] ===
-                                                            lastAppliedTimestampIntervalToText[0] &&
-                                                        timestampInterval[1] ===
-                                                            lastAppliedTimestampIntervalToText[1]) ||
-                                                    disableApplyTextSelection
-                                                }
-                                                onClick={handleApplyTimestampIntervalToText}
-                                            >
-                                                <DoneIcon fontSize="small" />
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                </Grid>
-                            </Grid>
-                        )}
                     </form>
                     {showQuickSelectFtue && lastSelectedExportMode !== undefined && (
                         <Alert

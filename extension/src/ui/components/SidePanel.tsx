@@ -312,7 +312,10 @@ export default function SidePanel({ dictionaryProvider, settingsProvider, settin
                         ...card,
                         subtitleFileName: subtitleFileNames?.[card.subtitle.track] ?? card.subtitleFileName,
                         url: tab?.url,
-                    }))
+                    })),
+                    undefined,
+                    undefined,
+                    syncedVideoTab
                 );
             } catch (error) {
                 handleError(error);

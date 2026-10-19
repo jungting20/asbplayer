@@ -5,6 +5,7 @@
         "failed": "Could not save the audio. Please try again."
     },
     "subtitleTimeFilter": {
+        "loadLast": "Cargar los últimos intervalos guardados",
         "editorsUnavailable": "Could not load range editors. Open them again from the subtitle panel.",
         "openEditors": "Open range editors ({{count}})",
         "editorsTitle": "Range editors ({{count}})",

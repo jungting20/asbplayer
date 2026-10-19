@@ -11,12 +11,13 @@ import { defaultAudioFileName } from '@project/common/audio-clip/audio-file-name
 
 interface Props {
     audioClip: AudioClip;
+    sequence?: number;
     onClose: () => void;
 }
 
-export default function AudioDownloadDialog({ audioClip, onClose }: Props) {
+export default function AudioDownloadDialog({ audioClip, sequence, onClose }: Props) {
     const { t } = useTranslation();
-    const [fileName, setFileName] = useState(() => defaultAudioFileName(audioClip.extension));
+    const [fileName, setFileName] = useState(() => defaultAudioFileName(audioClip.extension, sequence));
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(false);
 

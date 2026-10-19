@@ -8,6 +8,10 @@ import DialogTitle from '@mui/material/DialogTitle';
 import TextField from '@mui/material/TextField';
 import { parseSubtitleTimeRanges } from '@project/common/app/components/subtitle-time-filter';
 import type { SubtitleTimeRange } from '@project/common/app/components/subtitle-time-filter';
+import {
+    loadLastSubtitleTimeFilter,
+    saveLastSubtitleTimeFilter,
+} from '@project/common/app/components/subtitle-time-filter-history';
 
 interface Props {
     value: string;
@@ -17,7 +21,8 @@ interface Props {
 
 export default function SubtitleTimeFilterDialog({ value, onApply, onClose }: Props) {
     const { t } = useTranslation();
-    const [text, setText] = useState(value);
+    const [lastSaved] = useState(loadLastSubtitleTimeFilter);
+    const [text, setText] = useState(() => value || lastSaved);
     const { ranges, errorLine } = parseSubtitleTimeRanges(text);
     return (
         <Dialog open fullWidth maxWidth="sm" onClose={onClose}>
@@ -42,10 +47,19 @@ export default function SubtitleTimeFilterDialog({ value, onApply, onClose }: Pr
                     }
                 />
             </DialogContent>
-            <DialogActions>
+            <DialogActions sx={{ flexWrap: 'wrap' }}>
+                <Button disabled={!lastSaved} onClick={() => setText(lastSaved)}>
+                    {t('subtitleTimeFilter.loadLast')}
+                </Button>
                 <Button onClick={() => onApply('', [])}>{t('subtitleTimeFilter.clear')}</Button>
                 <Button onClick={onClose}>{t('action.cancel')}</Button>
-                <Button disabled={errorLine !== undefined} onClick={() => onApply(text, ranges)}>
+                <Button
+                    disabled={errorLine !== undefined}
+                    onClick={() => {
+                        saveLastSubtitleTimeFilter(text);
+                        onApply(text, ranges);
+                    }}
+                >
                     {t('subtitleTimeFilter.apply')}
                 </Button>
             </DialogActions>
